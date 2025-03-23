@@ -3,7 +3,7 @@ from streamlit_calendar import calendar
 from datetime import datetime
 import mysql.connector as sqlc
 
-
+# Function to register a new user
 def register():
     st.write("### Register:")
     name = st.text_input("Name")
@@ -16,7 +16,7 @@ def register():
         save_user(user)
         st.success("User registered successfully! Please login.")
 
-
+# Function to save a new user to the database
 def save_user(user):
     timeout = 10
     try:
@@ -39,7 +39,7 @@ def save_user(user):
     except sqlc.Error as e:
         st.error(f"Error saving user to MySQL: {e}")
 
-
+# Function to display the login page
 def login_page():
     st.title("Welcome to the ScheduleSync event management app!")
 
@@ -50,7 +50,7 @@ def login_page():
     elif option == "Login":
         login()
 
-
+# Function to handle user login
 def login():
     st.write("### Login:")
     usn = st.text_input("USN")
@@ -76,7 +76,7 @@ def login():
 
             if user and user["password"] == password:
                 st.session_state.logged_in = True
-                st.session_state.user = user  # ✅ Store user details in session
+                st.session_state.user = user  # Store user details in session
                 st.success(f"*Press login again*  \nWelcome back, {user['name']}!")
             else:
                 st.error("Invalid USN or password. Please try again.")
@@ -84,7 +84,8 @@ def login():
         except sqlc.Error as e:
             st.error(f"Error logging in: {e}")
 
-
+# Function to fetch events from the database
+@st.cache_data
 def fetch_events():
     timeout = 10
     try:
@@ -108,7 +109,7 @@ def fetch_events():
             event["start"] = event["start"].isoformat() if isinstance(event["start"], (datetime,)) else str(event["start"])
             event["end"] = event["end"].isoformat() if isinstance(event["end"], (datetime,)) else str(event["end"])
 
-            # ✅ Ensure extendedProps contains "end" for eventClick
+            # Ensure extendedProps contains "end" for eventClick
             event["extendedProps"] = {
                 "end": event["end"],
                 "description": event.get("description", "No description available")
@@ -120,7 +121,7 @@ def fetch_events():
         st.error(f"Error fetching events from MySQL: {e}")
         return []
 
-
+# Function to enter event details
 def enter_event():
     st.write("### Enter Event Details:")
     title = st.text_input("Title")
@@ -140,7 +141,7 @@ def enter_event():
         save_event(event)
         st.success("Event added successfully! Refresh to update calendar.")
 
-
+# Function to save an event to the database
 def save_event(event):
     timeout = 10
     try:
@@ -163,8 +164,7 @@ def save_event(event):
     except sqlc.Error as e:
         st.error(f"Error saving event to MySQL: {e}")
 
-
-#Ensure login state exists
+# Ensure login state exists
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user = None
@@ -173,11 +173,11 @@ if not st.session_state.logged_in:
     login_page()
     st.stop()
 
-#Ensure event selection state exists
+# Ensure event selection state exists
 if "selected_event" not in st.session_state:
     st.session_state.selected_event = None
 
-st.title(f"Hello {st.session_state.user['name']}!")  # ✅ Fix user name display
+st.title(f"Hello {st.session_state.user['name']}!")  # Fix user name display
 
 try:
     events = fetch_events()
@@ -196,11 +196,12 @@ calendar_options = {
 }
 
 enter_event()
+
 # Sidebar logout button
 with st.sidebar:
     st.write("## Profile")
-    img_url= f"https://university-student-photos.s3.ap-south-1.amazonaws.com/049/student_photos%2F{st.session_state.user['USN']}.JPG"
-    st.image(img_url, width=150,caption=st.session_state.user['name'])
+    img_url = f"https://university-student-photos.s3.ap-south-1.amazonaws.com/049/student_photos%2F{st.session_state.user['USN']}.JPG"
+    st.image(img_url, width=150, caption=st.session_state.user['name'])
     st.write(f"**USN:** {st.session_state.user['USN']}")
     st.write(f"**Name:** {st.session_state.user['name']}")
     st.write(f"**Email:** {st.session_state.user['email']}")
@@ -210,8 +211,10 @@ with st.sidebar:
         st.session_state.user = None  # Clear user data
         st.rerun()  # Refresh the app to show login page
 
+# Render the calendar
 cal = calendar(events=events, options=calendar_options)
 
+# Handle event clicks
 if isinstance(cal, dict) and "callback" in cal:
     if cal["callback"] == "eventClick":
         event_data = cal["eventClick"]["event"]
@@ -224,10 +227,9 @@ if isinstance(cal, dict) and "callback" in cal:
             "title": event_title, "start": event_start, "end": event_end, "description": event_description
         }
 
+# Display event details
 if st.session_state.selected_event:
     with st.expander(f"Event Details: {st.session_state.selected_event['title']}", expanded=True):
         st.write(f"📅 **Start Date:** {st.session_state.selected_event['start']}")
         st.write(f"⏳ **End Date:** {st.session_state.selected_event['end']}")
         st.write(f"📝 **Description:** {st.session_state.selected_event['description']}")
-
-
