@@ -53,7 +53,7 @@ def login_page():
 
 def login():
     st.write("### Login:")
-    usn = st.text_input("USN")
+    usn = st.text_input("USN").upper()
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
