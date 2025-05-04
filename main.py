@@ -7,7 +7,7 @@ import mysql.connector as sqlc
 def register():
     st.write("### Register:")
     name = st.text_input("Name")
-    usn = st.text_input("USN")
+    usn = st.text_input("USN").upper()
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
 
