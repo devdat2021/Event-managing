@@ -60,10 +60,10 @@ def save_user(user):
             charset="utf8mb4",
             connection_timeout=timeout,
             database="defaultdb",
-            host="mysqldb-nmam-events.h.aivencloud.com",
-            password="AVNS_YgAtatHm_yR2IzgTItR",
-            port=25203,
-            user="avnadmin",
+            host=st.secrets["mysql"]["host"],
+            password=st.secrets["mysql"]["password"],
+            port=st.secrets["mysql"]["port"],
+            user=st.secrets["mysql"]["user"],
         )
         cursor = connection.cursor()
         query = "INSERT INTO users (name, USN, email, password) VALUES (%s, %s, %s, %s)"
@@ -97,10 +97,10 @@ def login():
             connection = sqlc.connect(
                 charset="utf8mb4",
                 database="defaultdb",
-                host="mysqldb-nmam-events.h.aivencloud.com",
-                password="AVNS_YgAtatHm_yR2IzgTItR",
-                port=25203,
-                user="avnadmin",
+                host=st.secrets["mysql"]["host"],
+                password=st.secrets["mysql"]["password"],
+                port=st.secrets["mysql"]["port"],
+                user=st.secrets["mysql"]["user"],
             )
             cursor = connection.cursor(dictionary=True)
 
@@ -128,10 +128,10 @@ def fetch_events():
             charset="utf8mb4",
             connection_timeout=timeout,
             database="defaultdb",
-            host="mysqldb-nmam-events.h.aivencloud.com",
-            password="AVNS_YgAtatHm_yR2IzgTItR",
-            port=25203,
-            user="avnadmin",
+            host=st.secrets["mysql"]["host"],
+            password=st.secrets["mysql"]["password"],
+            port=st.secrets["mysql"]["port"],
+            user=st.secrets["mysql"]["user"],
         )
         cursor = connection.cursor(dictionary=True)
         cursor.execute("SELECT title, start, end, description, color FROM events")
@@ -184,10 +184,10 @@ def save_event(event):
             charset="utf8mb4",
             connection_timeout=timeout,
             database="defaultdb",
-            host="mysqldb-nmam-events.h.aivencloud.com",
-            password="AVNS_YgAtatHm_yR2IzgTItR",
-            port=25203,
-            user="avnadmin",
+            host=st.secrets["mysql"]["host"],
+            password=st.secrets["mysql"]["password"],
+            port=st.secrets["mysql"]["port"],
+            user=st.secrets["mysql"]["user"],
         )
         cursor = connection.cursor()
         query = "INSERT INTO events (title, start, end, description, color) VALUES (%s, %s, %s, %s, %s)"
