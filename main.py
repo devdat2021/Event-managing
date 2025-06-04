@@ -299,6 +299,11 @@ if st.session_state.selected_event:
         st.write(f"📝 **Description:** {st.session_state.selected_event['description']}")
 
 # Feedback section
-if st.button("Feedback / Report an Error"):
-    feedback()
+if "show_feedback" not in st.session_state:
+    st.session_state.show_feedback = False
 
+if st.button("Feedback / Report an Error"):
+    st.session_state.show_feedback = True
+
+if st.session_state.show_feedback:
+    feedback()
