@@ -113,7 +113,7 @@ def login():
             if user and user["password"] == password:
                 st.session_state.logged_in = True
                 st.session_state.user = user  # Store user details in session
-                st.experimental_rerun()  # Immediately rerun app to refresh UI
+                st.rerun()  # Immediately rerun app to refresh UI
             else:
                 st.error("Invalid USN or password. Please try again.")
 
