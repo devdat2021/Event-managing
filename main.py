@@ -20,6 +20,27 @@ def send_email(subject, body):
         server.login(sender_email, app_password)
         server.sendmail(sender_email, receiver_email, message)
 
+#bulk email function
+def send_bulk_email(subject, body, email_list):
+    smtp_server = 'smtp.gmail.com'
+    port = 465
+    sender_email = st.secrets["sender_email"]
+    app_password = st.secrets["app_password"]
+    
+
+    message = f"Subject: {subject}\n\n{body}"
+
+    try:
+        with smtplib.SMTP_SSL(smtp_server, port) as server:
+            server.login(sender_email, app_password)
+            for receiver_email in email_list:
+                try:
+                    server.sendmail(sender_email, receiver_email, message)
+                except Exception as e:
+                    print(f"Failed to send to {receiver_email}: {e}")
+    except Exception as e:
+        st.error(f"Bulk email failed: {e}")
+
 # Function to register a new user
 def register():
     st.write("### Register:")
@@ -29,11 +50,15 @@ def register():
     password = st.text_input("Password", type="password")
     confirm=st.text_input("Confirm Password", type="password")
     role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR"])
-
+    consent = st.checkbox("I agree to receive event email updates", value=True)
+    if consent:
+        consent = 'Y'
+    else:
+        consent = 'N'
 
     if st.button("Register"):
         if password==confirm and "NNM" in usn:
-            user = {"name": name, "usn": usn, "email": email, "password": password}
+            user = {"name": name, "usn": usn, "email": email, "password": password,"consent": consent}
             save_user(user)
 
             if role_claim != "None":
@@ -190,12 +215,23 @@ def save_event(event):
             user=st.secrets["mysql"]["user"],
         )
         cursor = connection.cursor()
+        q="SELECT email FROM users where consent='Y;"
+        cursor.execute(q)
+        emails = cursor.fetchall()
+        email_list = [email[0] for email in emails]  # Extract emails from tuples
+        
         query = "INSERT INTO events (title, start, end, description, color) VALUES (%s, %s, %s, %s, %s)"
         values = (event["title"], event["start"], event["end"], event["desc"], event["color"])
         cursor.execute(query, values)
         connection.commit()
         cursor.close()
         connection.close()
+        
+        # Notify users via email
+        subject = f"New Event: {event['title']}"
+        body = f"New Event Created:\n\nTitle: {event['title']}\nStart: {event['start']}\nEnd: {event['end']}\nDescription: {event['desc']}\nColor: {event['color']}"
+        send_bulk_email(subject, body, email_list)
+        st.info("Event saved successfully! Notifying users...")
     except sqlc.Error as e:
         st.error(f"Error saving event to MySQL: {e}")
 # Feedback function 
