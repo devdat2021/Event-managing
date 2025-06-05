@@ -3,8 +3,26 @@ from streamlit_calendar import calendar
 from datetime import datetime
 import mysql.connector as sqlc
 import smtplib
+import pandas as pd
 
 
+#Database connection 
+def db_connection():
+    timeout = 10
+    try:
+        connection = sqlc.connect(
+            charset="utf8mb4",
+            connection_timeout=timeout,
+            database="defaultdb",
+            host=st.secrets["mysql"]["host"],
+            password=st.secrets["mysql"]["password"],
+            port=st.secrets["mysql"]["port"],
+            user=st.secrets["mysql"]["user"],
+        )
+        return connection
+    except sqlc.Error as e:
+        st.error(f"Error connecting to MySQL: {e}")
+        return None
 #Function to notify/email me
 def send_email(subject, body):
     smtp_server = 'smtp.gmail.com'
@@ -19,14 +37,12 @@ def send_email(subject, body):
     with smtplib.SMTP_SSL(smtp_server, port) as server:
         server.login(sender_email, app_password)
         server.sendmail(sender_email, receiver_email, message)
-
 #bulk email function
 def send_bulk_email(subject, body, email_list):
     smtp_server = 'smtp.gmail.com'
     port = 465
     sender_email = st.secrets["sender_email"]
     app_password = st.secrets["app_password"]
-    
 
     message = f"Subject: {subject}\n\n{body}"
 
@@ -41,12 +57,15 @@ def send_bulk_email(subject, body, email_list):
     except Exception as e:
         st.error(f"Bulk email failed: {e}")
 
+
 # Function to register a new user
 def register():
     st.write("### Register:")
     name = st.text_input("Name")
     usn = st.text_input("USN").upper()
-    email = st.text_input("Email")
+    email = st.text_input("Email", value=usn.lower() + "@nmamit.in", disabled=False)
+    st.markdown("⚠️ _Default email ID is `USN@nmamit.in`_")
+
     password = st.text_input("Password", type="password")
     confirm=st.text_input("Confirm Password", type="password")
     role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR"])
@@ -55,6 +74,7 @@ def register():
         consent = 'Y'
     else:
         consent = 'N'
+
 
     if st.button("Register"):
         if password==confirm and "NNM" in usn:
@@ -81,18 +101,10 @@ def register():
 def save_user(user):
     timeout = 10
     try:
-        connection = sqlc.connect(
-            charset="utf8mb4",
-            connection_timeout=timeout,
-            database="defaultdb",
-            host=st.secrets["mysql"]["host"],
-            password=st.secrets["mysql"]["password"],
-            port=st.secrets["mysql"]["port"],
-            user=st.secrets["mysql"]["user"],
-        )
+        connection = db_connection()
         cursor = connection.cursor()
-        query = "INSERT INTO users (name, USN, email, password) VALUES (%s, %s, %s, %s)"
-        values = (user["name"], user["usn"], user["email"], user["password"])
+        query = "INSERT INTO users (name, USN, email, password,consent) VALUES (%s, %s, %s, %s,%s)"
+        values = (user["name"], user["usn"], user["email"], user["password"],user["consent"])
         cursor.execute(query, values)
         connection.commit()
         cursor.close()
@@ -114,19 +126,12 @@ def login_page():
 # Function to handle user login
 def login():
     st.write("### Login:")
-    usn = st.text_input("USN")
+    usn = st.text_input("USN").upper()
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
         try:
-            connection = sqlc.connect(
-                charset="utf8mb4",
-                database="defaultdb",
-                host=st.secrets["mysql"]["host"],
-                password=st.secrets["mysql"]["password"],
-                port=st.secrets["mysql"]["port"],
-                user=st.secrets["mysql"]["user"],
-            )
+            connection = db_connection()
             cursor = connection.cursor(dictionary=True)
 
             query = "SELECT * FROM users WHERE USN= %s"
@@ -139,6 +144,7 @@ def login():
                 st.session_state.logged_in = True
                 st.session_state.user = user  # Store user details in session
                 st.rerun()  # Immediately rerun app to refresh UI
+
             else:
                 st.error("Invalid USN or password. Please try again.")
 
@@ -149,17 +155,9 @@ def login():
 def fetch_events():
     timeout = 10
     try:
-        connection = sqlc.connect(
-            charset="utf8mb4",
-            connection_timeout=timeout,
-            database="defaultdb",
-            host=st.secrets["mysql"]["host"],
-            password=st.secrets["mysql"]["password"],
-            port=st.secrets["mysql"]["port"],
-            user=st.secrets["mysql"]["user"],
-        )
+        connection = db_connection()
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT title, start, end, description, color FROM events")
+        cursor.execute("SELECT title, start, end, description, color,USN FROM events")
         events = cursor.fetchall()
         cursor.close()
         connection.close()
@@ -196,7 +194,8 @@ def enter_event():
             "start": start.isoformat(),
             "end": end.isoformat(),
             "desc": desc,
-            "color": color
+            "color": color,
+            "USN": st.session_state.user['USN']  # Add USN of the user
         }
         save_event(event)
         st.success("Event added successfully! Refresh to update calendar.")
@@ -205,33 +204,26 @@ def enter_event():
 def save_event(event):
     timeout = 10
     try:
-        connection = sqlc.connect(
-            charset="utf8mb4",
-            connection_timeout=timeout,
-            database="defaultdb",
-            host=st.secrets["mysql"]["host"],
-            password=st.secrets["mysql"]["password"],
-            port=st.secrets["mysql"]["port"],
-            user=st.secrets["mysql"]["user"],
-        )
+        connection = db_connection()
         cursor = connection.cursor()
-        q="SELECT email FROM users where consent='Y;"
+        q="SELECT email FROM users where consent='Y';"
         cursor.execute(q)
         emails = cursor.fetchall()
+
         email_list = [email[0] for email in emails]  # Extract emails from tuples
-        
-        query = "INSERT INTO events (title, start, end, description, color) VALUES (%s, %s, %s, %s, %s)"
-        values = (event["title"], event["start"], event["end"], event["desc"], event["color"])
+        query = "INSERT INTO events (title, start, end, description, color, USN) VALUES (%s, %s, %s, %s, %s, %s)"
+        values = (event["title"], event["start"], event["end"], event["desc"], event["color"], event["USN"])
+
         cursor.execute(query, values)
         connection.commit()
         cursor.close()
         connection.close()
-        
         # Notify users via email
         subject = f"New Event: {event['title']}"
-        body = f"New Event Created:\n\nTitle: {event['title']}\nStart: {event['start']}\nEnd: {event['end']}\nDescription: {event['desc']}\nColor: {event['color']}"
+        body = f"New Event Created:\n\nTitle: {event['title']}\nStart: {event['start']}\nEnd: {event['end']}\nDescription: {event['desc']}"
         send_bulk_email(subject, body, email_list)
         st.info("Event saved successfully! Notifying users...")
+
     except sqlc.Error as e:
         st.error(f"Error saving event to MySQL: {e}")
 # Feedback function 
@@ -263,6 +255,23 @@ def feedback():
             st.success("Thanks for your feedback! We will look into it soon.")
         else:
             st.error("Please enter your feedback or problem description.")
+
+# Fetch users 
+def fetch_users():
+    timeout = 10
+    try:
+        connection = db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users")
+        users = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return users
+    except sqlc.Error as e:
+        st.error(f"Error fetching users from MySQL: {e}")
+        return []
+
+
 # Ensure login state exists
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -284,17 +293,8 @@ except Exception as e:
     st.error(f"Error fetching events: {e}")
     events = []
 
-option = st.selectbox("Choose View Type", ["Month View", "Week View", "Day View", "Events View"])
-opts = {"Month View": "dayGridMonth", "Week View": "timeGridWeek", "Day View": "timeGridDay", "Events View": "listWeek"}
+user_list=fetch_users()
 
-calendar_options = {
-    "initialView": opts.get(option, "dayGridMonth"),
-    "editable": False,
-    "selectable": True,
-    "eventDisplay": "block",
-}
-
-enter_event()
 
 # Sidebar logout button
 with st.sidebar:
@@ -311,6 +311,23 @@ with st.sidebar:
         st.session_state.user = None  # Clear user data
         st.rerun()  # Refresh the app to show login page
 
+
+if st.session_state.user['desig'] == "Admin":
+    st.write("#### Users List")
+    df= pd.DataFrame(user_list)
+    st.dataframe(df, use_container_width=True)
+    
+if st.session_state.user['desig'] != "Student":
+    enter_event()
+
+option = st.selectbox("Choose View Type", ["Month View","Events View","Week View", "Day View"])
+opts = {"Events View": "listMonth","Month View": "dayGridMonth", "Week View": "timeGridWeek", "Day View": "timeGridDay"}
+calendar_options = {
+    "initialView": opts.get(option, "DayGridMonth"),
+    "editable": False,
+    "selectable": True,
+    "eventDisplay": "block",
+}
 # Render the calendar
 cal = calendar(events=events, options=calendar_options)
 
@@ -322,17 +339,36 @@ if isinstance(cal, dict) and "callback" in cal:
         event_start = event_data["start"]
         event_end = event_data.get("extendedProps", {}).get("end", "No end time available")
         event_description = event_data.get("extendedProps", {}).get("description", "No description available")
-
+        event_usn= event_data.get("extendedProps", {}).get("USN", None) #st.session_state.user['USN'] event_data.get("extendedProps", {}).get("USN", None)
+        
+        users_dict = {user["USN"]: user["name"] for user in user_list}  # users_list = list of users
+        event_creator_name = users_dict.get(event_usn, "Unknown")
         st.session_state.selected_event = {
-            "title": event_title, "start": event_start, "end": event_end, "description": event_description
+            "title": event_title, "start": event_start, "end": event_end, "description": event_description, "USN": event_usn, "creator": event_creator_name
         }
 
 # Display event details
 if st.session_state.selected_event:
+    selected_usn= st.session_state.selected_event['USN']
     with st.expander(f"Event Details: {st.session_state.selected_event['title']}", expanded=True):
         st.write(f"📅 **Start Date:** {st.session_state.selected_event['start']}")
         st.write(f"⏳ **End Date:** {st.session_state.selected_event['end']}")
         st.write(f"📝 **Description:** {st.session_state.selected_event['description']}")
+        #with st.popover(st.write(f"👤 **Created By:** {st.session_state.selected_event['creator']}")):
+        with st.popover(f"👤 Created By: {st.session_state.selected_event['creator']}"):
+
+            if st.session_state.selected_event['creator'] !="Unknown":
+                for user in user_list:
+                    if user['USN']== selected_usn:
+                        selected_desig = user['desig']
+                        selected_email = user['email']
+                img_url = f"https://university-student-photos.s3.ap-south-1.amazonaws.com/049/student_photos%2F{st.session_state.selected_event['USN']}.JPG"
+                st.image(img_url, width=150, caption=st.session_state.user['name'])
+                st.write(f"**USN:** {st.session_state.selected_event['USN']}")
+                st.write(f"**Name:** {st.session_state.selected_event['creator']}")
+                st.write(f"**Email:** {selected_email}")
+                st.write(f"**Designation:** {selected_desig}")
+
 
 # Feedback section
 if "show_feedback" not in st.session_state:
@@ -343,3 +379,4 @@ if st.button("Feedback / Report an Error"):
 
 if st.session_state.show_feedback:
     feedback()
+
