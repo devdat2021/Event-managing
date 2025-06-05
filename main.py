@@ -363,7 +363,7 @@ if st.session_state.selected_event:
                         selected_desig = user['desig']
                         selected_email = user['email']
                 img_url = f"https://university-student-photos.s3.ap-south-1.amazonaws.com/049/student_photos%2F{st.session_state.selected_event['USN']}.JPG"
-                st.image(img_url, width=150, caption=st.session_state.user['name'])
+                st.image(img_url, width=150, caption="Profile")
                 st.write(f"**USN:** {st.session_state.selected_event['USN']}")
                 st.write(f"**Name:** {st.session_state.selected_event['creator']}")
                 st.write(f"**Email:** {selected_email}")
