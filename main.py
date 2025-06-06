@@ -266,7 +266,7 @@ def fetch_users():
     try:
         connection = db_connection()
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users")
+        cursor.execute("SELECT id,name,USN,desig,email FROM users")
         users = cursor.fetchall()
         cursor.close()
         connection.close()
