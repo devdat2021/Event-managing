@@ -5,6 +5,12 @@ import mysql.connector as sqlc
 import smtplib
 import pandas as pd
 
+st.set_page_config(
+    page_title="ScheduleSync",
+    page_icon="https://raw.githubusercontent.com/devdat2021/Event-managing/refs/heads/main/App%20logo.png",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 #Database connection 
 def db_connection():
