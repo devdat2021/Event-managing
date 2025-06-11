@@ -72,7 +72,7 @@ def register():
 
     password = st.text_input("Password", type="password")
     confirm=st.text_input("Confirm Password", type="password")
-    role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR","Other"])
+    role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR"])
     consent = st.checkbox("I agree to receive event email updates", value=True)
     if consent:
         consent = 'Y'
@@ -81,25 +81,26 @@ def register():
 
 
     if st.button("Register"):
-        if password==confirm and "NNM" in usn:
-            user = {"name": name, "usn": usn, "email": email, "password": password,"consent": consent}
-            save_user(user)
+        with st.spinner("Processing..."):
+            if password==confirm and "NNM" in usn:
+                user = {"name": name, "usn": usn, "email": email, "password": password,"consent": consent}
+                save_user(user)
 
-            if role_claim != "None":
-                subject = f"Role Claim Notification: {role_claim}"
-                body = f"""
-                New user has claimed a role.
+                if role_claim != "None":
+                    subject = f"Role Claim Notification: {role_claim}"
+                    body = f"""
+                    New user has claimed a role.
 
-                Name: {name}
-                USN: {usn}
-                Email: {email}
-                Claimed Role: {role_claim}
-                """
-                send_email(subject, body)
-                st.info("Role will be verified soon and changed.")
-            st.success("User registered successfully! Please login.")
-        else:
-            st.error("Please retry with correct details or ensure passwords match.")
+                    Name: {name}
+                    USN: {usn}
+                    Email: {email}
+                    Claimed Role: {role_claim}
+                    """
+                    send_email(subject, body)
+                    st.info("Role will be verified soon and changed.")
+                st.success("User registered successfully! Please login.")
+            else:
+                st.error("Please retry with correct details or ensure passwords match.")
 
 # Function to save a new user to the database
 def save_user(user):
@@ -134,26 +135,28 @@ def login():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        try:
-            connection = db_connection()
-            cursor = connection.cursor(dictionary=True)
+        with st.spinner("Fetching user..."):
+            try:
+                connection = db_connection()
+                cursor = connection.cursor(dictionary=True)
 
-            query = "SELECT * FROM users WHERE USN= %s"
-            cursor.execute(query, (usn,))
-            user = cursor.fetchone()
-            cursor.close()
-            connection.close()
+                query = "SELECT * FROM users WHERE USN= %s"
+                cursor.execute(query, (usn,))
+                user = cursor.fetchone()
+                cursor.close()
+                connection.close()
 
-            if user and user["password"] == password:
-                st.session_state.logged_in = True
-                st.session_state.user = user  # Store user details in session
-                st.rerun()  # Immediately rerun app to refresh UI
+                if user and user["password"] == password:
+                    st.session_state.logged_in = True
+                    st.session_state.user = user  # Store user details in session
+                    st.rerun()  # Immediately rerun app to refresh UI
 
-            else:
-                st.error("Invalid USN or password. Please try again.")
+                else:
+                    st.error("Invalid USN or password. Please try again.")
 
-        except sqlc.Error as e:
-            st.error(f"Error logging in: {e}")
+            except sqlc.Error as e:
+                st.error(f"Error logging in: {e}")
+
 
 # Function to fetch events from the database
 def fetch_events():
