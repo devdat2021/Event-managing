@@ -72,7 +72,7 @@ def register():
 
     password = st.text_input("Password", type="password")
     confirm=st.text_input("Confirm Password", type="password")
-    role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR"])
+    role_claim = st.selectbox("Do you want to apply for a role?", ["None", "Club Leader", "Class CR","Other"])
     consent = st.checkbox("I agree to receive event email updates", value=True)
     if consent:
         consent = 'Y'
